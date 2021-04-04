@@ -7,6 +7,20 @@
 #include "x86.h"
 #include "syscall.h"
 
+int check_present(pde_t *pgdir, const void *va)
+{
+  pde_t *pde;
+  pte_t *pgtab;
+
+  pde = &pgdir[PDX(va)];
+  if(*pde & PTE_P){
+    pgtab = (pte_t*)P2V(PTE_ADDR(*pde));
+  } else {
+      return 0;
+  }
+  return pgtab[PTX(va)] & PTE_P;
+}
+
 // User code makes a system call with INT T_SYSCALL.
 // System call number in %eax.
 // Arguments on the stack, from the user call to the C
@@ -21,7 +35,7 @@ fetchint(uint addr, int *ip)
 
   if(addr >= curproc->sz || addr+4 > curproc->sz)
     return -1;
-  if (curproc->pid > 1 && addr < PGSIZE) {
+  if (!check_present(curproc->pgdir, (const void*)addr)) {
 	  return -1; 
   }
   *ip = *(int*)(addr);
@@ -39,7 +53,7 @@ fetchstr(uint addr, char **pp)
 
   if(addr >= curproc->sz)
     return -1;
-  if (curproc->pid > 1 && addr < PGSIZE) {
+  if (!check_present(curproc->pgdir, (const void*)addr)) {
 	  return -1; 
   }
   *pp = (char*)addr;
