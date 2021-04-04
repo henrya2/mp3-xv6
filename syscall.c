@@ -35,7 +35,11 @@ fetchint(uint addr, int *ip)
 
   if(addr >= curproc->sz || addr+4 > curproc->sz)
     return -1;
-  if (!check_present(curproc->pgdir, (const void*)addr)) {
+
+  if (!check_present(curproc->pgdir, (const void*)(addr + 0))) {
+	  return -1; 
+  }
+  if (!check_present(curproc->pgdir, (const void*)(addr + 3))) {
 	  return -1; 
   }
   *ip = *(int*)(addr);
@@ -85,6 +89,16 @@ argptr(int n, char **pp, int size)
     return -1;
   if(size < 0 || (uint)i >= curproc->sz || (uint)i+size > curproc->sz)
     return -1;
+  if (!check_present(curproc->pgdir, (const void*)i)) {
+	  return -1; 
+  }
+  if (size > 0)
+  {
+    if (!check_present(curproc->pgdir, (const void*)(i + size - 1))) {
+	    return -1; 
+    }
+  }
+
   *pp = (char*)i;
   return 0;
 }
