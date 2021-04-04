@@ -7,7 +7,7 @@
 #include "x86.h"
 #include "syscall.h"
 
-int check_present(pde_t *pgdir, const void *va)
+int check_page_present(pde_t *pgdir, const void *va)
 {
   pde_t *pde;
   pte_t *pgtab;
@@ -36,10 +36,10 @@ fetchint(uint addr, int *ip)
   if(addr >= curproc->sz || addr+4 > curproc->sz)
     return -1;
 
-  if (!check_present(curproc->pgdir, (const void*)(addr + 0))) {
+  if (!check_page_present(curproc->pgdir, (const void*)(addr + 0))) {
 	  return -1; 
   }
-  if (!check_present(curproc->pgdir, (const void*)(addr + 3))) {
+  if (!check_page_present(curproc->pgdir, (const void*)(addr + 3))) {
 	  return -1; 
   }
   *ip = *(int*)(addr);
@@ -57,7 +57,7 @@ fetchstr(uint addr, char **pp)
 
   if(addr >= curproc->sz)
     return -1;
-  if (!check_present(curproc->pgdir, (const void*)addr)) {
+  if (!check_page_present(curproc->pgdir, (const void*)addr)) {
 	  return -1; 
   }
   *pp = (char*)addr;
@@ -89,12 +89,12 @@ argptr(int n, char **pp, int size)
     return -1;
   if(size < 0 || (uint)i >= curproc->sz || (uint)i+size > curproc->sz)
     return -1;
-  if (!check_present(curproc->pgdir, (const void*)i)) {
+  if (!check_page_present(curproc->pgdir, (const void*)i)) {
 	  return -1; 
   }
   if (size > 0)
   {
-    if (!check_present(curproc->pgdir, (const void*)(i + size - 1))) {
+    if (!check_page_present(curproc->pgdir, (const void*)(i + size - 1))) {
 	    return -1; 
     }
   }
@@ -138,6 +138,9 @@ extern int sys_wait(void);
 extern int sys_write(void);
 extern int sys_uptime(void);
 
+extern int sys_mprotect(void);
+extern int sys_munprotect(void);
+
 static int (*syscalls[])(void) = {
 [SYS_fork]    sys_fork,
 [SYS_exit]    sys_exit,
@@ -160,6 +163,8 @@ static int (*syscalls[])(void) = {
 [SYS_link]    sys_link,
 [SYS_mkdir]   sys_mkdir,
 [SYS_close]   sys_close,
+[SYS_mprotect] sys_mprotect,
+[SYS_munprotect] sys_munprotect,
 };
 
 void

@@ -385,6 +385,77 @@ copyout(pde_t *pgdir, uint va, void *p, uint len)
   return 0;
 }
 
+
+int
+mprotect(void *addr, int len)
+{
+  int addrvalue = (int)addr;
+  if (addrvalue % PGSIZE != 0)
+    return -1;
+
+  if (addrvalue < 0)
+    return -1;    
+
+  pde_t *pgdir = myproc()->pgdir;
+
+  if (len <= 0)
+    return -1;
+
+  for (int t = 0; t < len; ++t)
+  {
+    if (!check_page_present(pgdir, (void *)(addrvalue + t * PGSIZE)))
+      return -1;
+  }
+
+  for (int t = 0; t < len; ++t)
+  {
+    pte_t* pte = walkpgdir(pgdir, (void *)(addrvalue + t * PGSIZE), 0);
+    if(pte == 0)
+      panic("mprotect");
+
+    *pte &= ~PTE_W;
+  }
+
+  lcr3(V2P(pgdir)); // update the CR3 register  
+
+  return 0;
+}
+
+int
+munprotect(void *addr, int len)
+{
+  int addrvalue = (int)addr;
+  if (addrvalue % PGSIZE != 0)
+    return -1;
+
+  if (addrvalue < 0)
+    return -1;
+
+  pde_t *pgdir = myproc()->pgdir;
+
+  if (len <= 0)
+    return -1;
+
+  for (int t = 0; t < len; ++t)
+  {
+    if (!check_page_present(pgdir, (void *)(addrvalue + t * PGSIZE)))
+      return -1;
+  }
+
+  for (int t = 0; t < len; ++t)
+  {
+    pte_t* pte = walkpgdir(pgdir, (void *)(addrvalue + t * PGSIZE), 0);
+    if(pte == 0)
+      panic("munprotect");
+
+    *pte |= PTE_W;
+  }
+
+  lcr3(V2P(pgdir)); // update the CR3 register  
+
+  return 0;
+}
+
 //PAGEBREAK!
 // Blank page.
 //PAGEBREAK!
